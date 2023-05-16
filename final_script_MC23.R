@@ -2,9 +2,6 @@
 ## AUTOR: Bryan Rojas
 ##date: 11/05/23
 
-#revisar supuestos y comparar reg 4, reg5, REG 8, 10 --- explicas cosas dictintas--- no interesante
-#11 y 12, tienen un mejor ajuste
-
 #importamos librerias a utilizar
 library(tidyverse)
 library(janitor)
@@ -40,8 +37,6 @@ atus_cdmx <- db_21cdmx %>%
 atus_cdmx <- atus_cdmx %>% 
   mutate(tasa_mortalidad = (suma_fallecidos / suma_victimas)*100, na.rm = TRUE)
 
-atus_cdmx$tasa_mortalidad <- replace_na(atus_cdmx$tasa_mortalidad, 0)
-
 atus_prueba <- atus_cdmx %>% 
   filter(aliento != "Se ignora", cinturon != "Se ignora")
 
@@ -70,14 +65,6 @@ summary(reg4)
 reg5 <- lm(suma_heridos ~ id_edad, data = atus_prueba) # ojo aqui
 summary(reg5)
 
-#reg6 fallecidos ---CHAFA
-reg6 <- lm(suma_fallecidos ~ id_edad, data = atus_prueba) 
-summary(reg6)
-
-#reg con id_hora como explicativa CHAFA
-reg7 <- lm(tasa_mortalidad ~ id_hora, data = atus_prueba) 
-summary(reg7)
-
 #reg8 - prueba
 reg8 <- lm(tasa_mortalidad ~ suma_autos , data = atus_prueba) # ojo aqui
 summary(reg8)
@@ -86,17 +73,14 @@ summary(reg8)
 reg9 <- lm(suma_victimas ~ id_hora, data = atus_prueba) 
 summary(reg9)
 
-reg10 <- lm(suma_victimas ~ suma_autos, data = atus_prueba) # ojo aqui!!
-summary(reg10)
-
-#modelos simples con correcion de variables log
-reg11 <- lm(tasa_mortalidad ~ log(suma_autos), data = atus_prueba) # ojo aqui
+#modelos simples con correcion de variables log --- NO MEJORA AJUSTE
+reg11 <- lm(tasa_mortalidad ~ log(suma_autos), data = atus_prueba)
 summary(reg11)
 
-reg12 <- lm(tasa_mortalidad ~ I(suma_autos ^2), data = atus_prueba) # ojo aqui
+reg12 <- lm(tasa_mortalidad ~ I(suma_autos ^2), data = atus_prueba)
 summary(reg12)
 
-#reg lineales, con correcion de variables originales de interes CHAFA!! NO PONER
+#reg lineales, con correcion de variables originales de interes -NO MEJORA AJUSTE
 reg13_1 <- lm(tasa_mortalidad ~ I(id_edad ^2), data = atus_prueba)
 summary(reg13_1)
 reg14 <- lm(tasa_mortalidad ~ log(id_edad), data = atus_prueba)
@@ -186,21 +170,7 @@ summary(reg21)
 reg22 <- lm(tasa_mortalidad ~ id_edad + aliento + cinturon + sexo, data = atus_prueba)
 summary(reg22)
 
-AIC(reg20, reg21, reg22) # me quedo con reg22
-
-## modelos reg multiple quitando cuma autos por alta autocorrelacion---- HORA
-reg23 <- lm(tasa_mortalidad ~ id_hora + caparod + causaacci + aliento + cinturon + sexo, data = atus_prueba)
-summary(reg23)
-
-#reg multiple con solo variables significativas
-reg24 <- lm(tasa_mortalidad ~ id_hora + aliento + cinturon, data = atus_prueba)
-summary(reg24)
-
-#reg multiple con solo variables significativas + sexo
-reg25 <- lm(tasa_mortalidad ~ id_hora + aliento + cinturon + sexo, data = atus_prueba)
-summary(reg25)
-
-AIC(reg20, reg21, reg22,reg23, reg24, reg25)  # me quedo con reg22 y segundo con reg25
+AIC(reg20, reg21, reg22) #elegir reg22
 
 #Correr supuestos sobre reg multiple
 autoplot(reg22)
@@ -209,7 +179,7 @@ resettest(reg22) # supuesto linealidad : NO CUMPLE
 shapiro.test(resid(reg22)) #NORMALIDAD si cumple con normalidad
 plot(reg22, 2)
 
-bptest(reg22) #hay homocedasticidad ;)
+bptest(reg22) #hay homocedasticidad
 plot(reg22, 3)
 
 dwtest(reg22) # hay autocorrelacion suma autos y tasa mortalidad, por lo tanto reahacer modelos multiples con id edad o id hora
@@ -217,14 +187,11 @@ plot(reg22, 5)
 
 vif(reg22) # no hay alta colinealidad
 
-
 #tecnica adicional - modelo logit / probit
 #transformamos variables
 atus_prueba <- atus_prueba %>% 
   mutate(prob_mortal = cut(porcentaje_mortalidad, breaks = c(0, 0.5, 1),
                            labels = c("0","1")))
-
-atus_prueba$prob_mortal <- replace_na(atus_prueba$prob_mortal, "0")
 
 #modelo logit binomial
 logit_bin1 <- glm(prob_mortal ~ id_edad + aliento + cinturon, data = atus_prueba , family = binomial(link = "logit"))
@@ -236,10 +203,9 @@ logit_bin2 <- glm(prob_mortal ~ id_edad + aliento + cinturon + sexo, data = atus
 summary(logit_bin2)
 margins(logit_bin2)
 
-#LOGIT 1 ES MAS ACURATE
+#LOGIT 1 ES MAS ACCURATE
 
 #correr probit sin sexo, probit + sexo
-
 probit_bin1 <- glm(prob_mortal ~ id_edad + aliento + cinturon, data = atus_prueba , family = binomial(link = "probit"))
 summary(probit_bin1)
 margins(probit_bin1)
@@ -437,6 +403,5 @@ probit_bin02 <- glm(prob_mortal ~ suma_autos + aliento + cinturon + sexo, data =
 summary(probit_bin2)
 margins(probit_bin2)
 
-tabla_probit02 <- stargazer(probit_bin01, probit_bin02, type = "text")
-
 tabla_log_prob <- stargazer(logit_bin01, probit_bin01, type = "text")
+
